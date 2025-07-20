@@ -3,10 +3,12 @@ module instr_mem(
     output [31:0] instr
 );
 
- reg [31:0] memory [0:255];
+reg [31:0] mem [0:255];  
 
- initial begin
-    $readmemh("instr_mem.hex", memory);
- end
- assign instr = memory[addr[9:2]];
- endmodule
+initial begin
+    $readmemh("if_stage/instr_mem.hex", mem);  // Adjust path if needed
+end
+
+assign instr = mem[addr[9:2]];  // Assuming word-aligned instructions
+
+endmodule

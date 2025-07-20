@@ -4,15 +4,23 @@ module mem_stage (
     input mem_write,
     input [31:0] addr,
     input [31:0] write_data,
-    output [31:0] read_data
+    output reg [31:0] read_data
 );
 
-reg [31:0] data_mem[0:255] ;
-always @(posedge clk) begin
-    if (mem_write) begin
-        data_mem[addr[9:2]]<=write_data;
+    // 256 x 32-bit memory = 1KB
+    reg [31:0] data_mem [0:255];
+
+    always @(posedge clk) begin
+        if (mem_write) begin
+            data_mem[addr[9:2]] <= write_data;
+        end
     end
-end
-assign read_data = mem_read?data_mem[addr[9:2]]:32'b0;
-    
+
+    always @(*) begin
+        if (mem_read)
+            read_data = data_mem[addr[9:2]];
+        else
+            read_data = 32'b0;
+    end
+
 endmodule
