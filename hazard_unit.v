@@ -12,8 +12,7 @@ always @(*) begin
     stall = 0;
     pc_write = 1;
     if_id_write = 1;
-    
-    // Load-use hazard detection
+
     if (id_ex_mem_read && 
         ((id_ex_rd == if_id_rs1) || (id_ex_rd == if_id_rs2))) begin
         stall = 1;
