@@ -15,16 +15,20 @@ module cpu_tb;
 
   initial begin
     $dumpfile("cpu_tb.vcd");
-    $dumpvars(0, cpu_tb);
-
+    $dumpvars(0, uut);  // Dump ALL signals
+    
+    $display("Starting simulation...");
+    
     clk = 0;
     reset = 1;
-
-    // Wait a bit then release reset
-    #10 reset = 0;
-
-    // Run for a certain number of cycles
-    #500 $finish;
+    #20 reset = 0;  // Longer reset period
+    
+    // Monitor key signals
+    $monitor("Time=%0t: PC=%h Instr=%h", 
+             $time, uut.pc_if, uut.instr_if);
+    
+    #500;  // Run for 500ns
+    $display("Simulation finished");
+    $finish;
   end
-
 endmodule
