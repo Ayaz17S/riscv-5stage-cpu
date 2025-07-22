@@ -50,6 +50,7 @@ module cpu(
     wire branch_taken = id_ex_branch && zero;
     wire [31:0] branch_target = id_ex_pc + id_ex_imm;
 
+    wire [1:0] forwardA, forwardB;
     // Control Unit
     control_unit cu(
         .opcode(instr_id[6:0]),
@@ -63,27 +64,30 @@ module cpu(
     );
 
     // Hazard Detection
-    hazard_unit hu(
-        .id_ex_mem_read(id_ex_mem_read),
-        .id_ex_rd(id_ex_rd),
-        .if_id_rs1(instr_id[19:15]),
-        .if_id_rs2(instr_id[24:20]),
-        .pc_write(if_pc_write),
-        .if_id_write(if_id_write),
-        .stall()
-    );
+wire stall;
+
+hazard_unit hu(
+    .id_ex_mem_read(id_ex_mem_read),
+    .id_ex_rd(id_ex_rd),
+    .if_id_rs1(instr_id[19:15]),
+    .if_id_rs2(instr_id[24:20]),
+    .pc_write(if_pc_write),
+    .if_id_write(if_id_write),
+    .stall(stall)
+);
+
 
     // Forwarding Unit
-    forwarding_unit fu(
-        .ex_mem_rd(ex_mem_rd),
-        .mem_wb_rd(mem_wb_rd),
-        .ex_mem_reg_write(ex_mem_reg_write),
-        .mem_wb_reg_write(mem_wb_reg_write),
-        .id_ex_rs1(id_ex_rs1),
-        .id_ex_rs2(id_ex_rs2),
-        .forwardA(),
-        .forwardB()
-    );
+ forwarding_unit fu(
+    .ex_mem_rd(ex_mem_rd),
+    .mem_wb_rd(mem_wb_rd),
+    .ex_mem_reg_write(ex_mem_reg_write),
+    .mem_wb_reg_write(mem_wb_reg_write),
+    .id_ex_rs1(id_ex_rs1),
+    .id_ex_rs2(id_ex_rs2),
+    .forwardA(forwardA),
+    .forwardB(forwardB)
+);
 
     // Pipeline Stages
     if_stage if_stage(
@@ -156,7 +160,7 @@ module cpu(
         .branch_out(id_ex_branch)
     );
 
-    ex_stage ex_stage(
+      ex_stage ex_stage(
         .rs1_data(id_ex_rs1_data),
         .rs2_data(id_ex_rs2_data),
         .imm(id_ex_imm),
@@ -164,9 +168,14 @@ module cpu(
         .alu_op(id_ex_alu_op),
         .funct3(id_ex_funct3),
         .funct7(id_ex_funct7),
+        .forwardA(forwardA),
+        .forwardB(forwardB),
+        .ex_mem_alu_result(ex_mem_alu_result),
+        .write_data(write_data),
         .alu_result(alu_result),
         .zero(zero)
     );
+
 
     ex_mem_reg ex_mem_reg(
         .clk(clk),
@@ -219,5 +228,10 @@ module cpu(
         .mem_to_reg(mem_wb_mem_to_reg),
         .write_back_data(write_data)
     );
+
+   
+
+
+
 
 endmodule
