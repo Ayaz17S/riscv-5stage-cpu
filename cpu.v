@@ -1,5 +1,4 @@
-// Top-Level CPU Module with all pipeline stages connected
-
+// Fixed Top-Level CPU Module with proper stall connections
 module cpu(
     input clk,
     input reset
@@ -50,7 +49,12 @@ module cpu(
     wire branch_taken = id_ex_branch && zero;
     wire [31:0] branch_target = id_ex_pc + id_ex_imm;
 
+    // Forwarding
     wire [1:0] forwardA, forwardB;
+    
+    // ✅ Hazard Detection
+    wire stall;
+
     // Control Unit
     control_unit cu(
         .opcode(instr_id[6:0]),
@@ -63,33 +67,32 @@ module cpu(
         .branch(id_branch)
     );
 
-    // Hazard Detection
-wire stall;
-
-hazard_unit hu(
-    .id_ex_mem_read(id_ex_mem_read),
-    .id_ex_rd(id_ex_rd),
-    .if_id_rs1(instr_id[19:15]),
-    .if_id_rs2(instr_id[24:20]),
-    .pc_write(if_pc_write),
-    .if_id_write(if_id_write),
-    .stall(stall)
-);
-
+    // Hazard Detection Unit
+    hazard_unit hu(
+        .id_ex_mem_read(id_ex_mem_read),
+        .id_ex_rd(id_ex_rd),
+        .if_id_rs1(instr_id[19:15]),
+        .if_id_rs2(instr_id[24:20]),
+        .pc_write(if_pc_write),
+        .if_id_write(if_id_write),
+        .stall(stall)
+    );
 
     // Forwarding Unit
- forwarding_unit fu(
-    .ex_mem_rd(ex_mem_rd),
-    .mem_wb_rd(mem_wb_rd),
-    .ex_mem_reg_write(ex_mem_reg_write),
-    .mem_wb_reg_write(mem_wb_reg_write),
-    .id_ex_rs1(id_ex_rs1),
-    .id_ex_rs2(id_ex_rs2),
-    .forwardA(forwardA),
-    .forwardB(forwardB)
-);
+    forwarding_unit fu(
+        .ex_mem_rd(ex_mem_rd),
+        .mem_wb_rd(mem_wb_rd),
+        .ex_mem_reg_write(ex_mem_reg_write),
+        .mem_wb_reg_write(mem_wb_reg_write),
+        .id_ex_rs1(id_ex_rs1),
+        .id_ex_rs2(id_ex_rs2),
+        .forwardA(forwardA),
+        .forwardB(forwardB)
+    );
 
-    // Pipeline Stages
+    // ========== Pipeline Stages ==========
+
+    // IF Stage
     if_stage if_stage(
         .clk(clk),
         .reset(reset),
@@ -100,6 +103,7 @@ hazard_unit hu(
         .pc_out(pc_if)
     );
 
+    // IF/ID Pipeline Register
     if_id_reg if_id_reg(
         .clk(clk),
         .reset(reset),
@@ -111,6 +115,7 @@ hazard_unit hu(
         .instr_out(instr_id)
     );
 
+    // ID Stage
     id_stage id_stage(
         .clk(clk),
         .reset(reset),
@@ -123,9 +128,11 @@ hazard_unit hu(
         .imm(imm)
     );
 
+    // ✅ ID/EX Pipeline Register (Fixed with stall input)
     id_ex_reg id_ex_reg(
         .clk(clk),
         .reset(reset),
+        .stall(stall),  // ✅ Connected stall signal
         .pc_in(pc_id),
         .rs1_data_in(rs1_data),
         .rs2_data_in(rs2_data),
@@ -160,7 +167,8 @@ hazard_unit hu(
         .branch_out(id_ex_branch)
     );
 
-      ex_stage ex_stage(
+    // EX Stage
+    ex_stage ex_stage(
         .rs1_data(id_ex_rs1_data),
         .rs2_data(id_ex_rs2_data),
         .imm(id_ex_imm),
@@ -176,7 +184,7 @@ hazard_unit hu(
         .zero(zero)
     );
 
-
+    // EX/MEM Pipeline Register
     ex_mem_reg ex_mem_reg(
         .clk(clk),
         .reset(reset),
@@ -198,6 +206,7 @@ hazard_unit hu(
         .mem_to_reg_out(ex_mem_mem_to_reg)
     );
 
+    // MEM Stage
     mem_stage mem_stage(
         .clk(clk),
         .mem_read(ex_mem_mem_read),
@@ -207,6 +216,7 @@ hazard_unit hu(
         .read_data(mem_read_data)
     );
 
+    // MEM/WB Pipeline Register
     mem_wb_reg mem_wb_reg(
         .clk(clk),
         .reset(reset),
@@ -222,16 +232,12 @@ hazard_unit hu(
         .mem_to_reg_out(mem_wb_mem_to_reg)
     );
 
+    // WB Stage
     wb_stage wb_stage(
         .alu_result(mem_wb_alu_result),
         .mem_data(mem_wb_mem_data),
         .mem_to_reg(mem_wb_mem_to_reg),
         .write_back_data(write_data)
     );
-
-   
-
-
-
 
 endmodule
