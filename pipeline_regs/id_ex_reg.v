@@ -1,8 +1,8 @@
-// Fixed ID/EX Pipeline Register with Stall Support
+// Fixed ID/EX Pipeline Register with Robust Stall Support
 module id_ex_reg(
     input clk,
     input reset,
-    input stall,  // ✅ Added stall input
+    input stall,
 
     // Data
     input [31:0] pc_in,
@@ -67,8 +67,17 @@ always @(posedge clk or posedge reset) begin
         mem_to_reg_out <= 0;
         branch_out <= 0;
     end else if (stall) begin
-        // ✅ When stalling, insert NOP (bubble) by zeroing control signals
-        // Keep data signals unchanged, but zero out control signals
+        // ✅ On stall, insert a perfect NOP (bubble) by clearing ALL outputs.
+        // This removes the race condition by making the stall behavior explicit.
+        pc_out <= 0;
+        rs1_data_out <= 0;
+        rs2_data_out <= 0;
+        imm_out <= 0;
+        rs1_out <= 0;
+        rs2_out <= 0;
+        rd_out <= 0;
+        funct3_out <= 0;
+        funct7_out <= 0;
         reg_write_out <= 0;
         alu_src_out <= 0;
         alu_op_out <= 0;
@@ -76,7 +85,6 @@ always @(posedge clk or posedge reset) begin
         mem_write_out <= 0;
         mem_to_reg_out <= 0;
         branch_out <= 0;
-        // Data signals remain the same (or could be zeroed for cleaner NOPs)
     end else begin
         // Normal operation - propagate all signals
         pc_out <= pc_in;
@@ -99,3 +107,4 @@ always @(posedge clk or posedge reset) begin
 end
 
 endmodule
+

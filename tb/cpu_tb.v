@@ -1,4 +1,4 @@
-// Comprehensive CPU Testbench
+// Comprehensive CPU Testbench -- WITH DIAGNOSTIC PROBE
 `timescale 1ns/1ps
 
 module cpu_tb;
@@ -38,30 +38,26 @@ module cpu_tb;
         
         $display("Reset released at time %0t", $time);
         
-        // Run for enough cycles to execute several instructions
-        // Each instruction takes 5 cycles to complete (pipeline depth)
-        // Plus additional cycles for hazards and branches
+        // Run for enough cycles to execute the test program
         repeat(100) @(posedge clk);
         
         $display("=== Test Results Analysis ===");
         
         // Check register file contents
         $display("Register File Contents:");
-        $display("x1 = %h", uut.id_stage.RF.regs[1]);   // Should be 1
-        $display("x2 = %h", uut.id_stage.RF.regs[2]);   // Should be 2
-        $display("x3 = %h", uut.id_stage.RF.regs[3]);   // Should be 3 (1+2)
-        $display("x4 = %h", uut.id_stage.RF.regs[4]);   // Should be -1 (1-2)
-        $display("x5 = %h", uut.id_stage.RF.regs[5]);   // Should be 0 (1&2)
-        $display("x6 = %h", uut.id_stage.RF.regs[6]);   // Should be 3 (1|2)
-        $display("x7 = %h", uut.id_stage.RF.regs[7]);   // Should be 3 (1^2)
-        $display("x8 = %h", uut.id_stage.RF.regs[8]);   // Should be 4 (1<<2)
-        $display("x12 = %h", uut.id_stage.RF.regs[12]); // Should be 2 (1+1)
+        $display("x1 = %h", uut.id_stage.RF.regs[1]);
+        $display("x2 = %h", uut.id_stage.RF.regs[2]);
+        $display("x3 = %h", uut.id_stage.RF.regs[3]);
+        $display("x4 = %h", uut.id_stage.RF.regs[4]);
+        $display("x5 = %h", uut.id_stage.RF.regs[5]);
+        $display("x6 = %h", uut.id_stage.RF.regs[6]);
+        $display("x7 = %h", uut.id_stage.RF.regs[7]);
+        $display("x8 = %h", uut.id_stage.RF.regs[8]);
+        $display("x12 = %h", uut.id_stage.RF.regs[12]);
         
-        // Check if hazard detection worked
         $display("=== Hazard Detection Test ===");
         $display("Stall signal was activated during load-use hazards");
         
-        // Check if forwarding worked
         $display("=== Forwarding Test ===");
         $display("Forwarding paths were utilized for data dependencies");
         
@@ -72,11 +68,25 @@ module cpu_tb;
         $finish;
     end
     
-    // Timeout safety mechanism
-    initial begin
-        #50000; // 50us timeout
-        $display("ERROR: Test timed out!");
-        $finish;
+    // ===================================================================
+    // === NEW DIAGNOSTIC PROBE (Corrected) ==============================
+    // This block will activate ONLY when the SUB instruction (at PC=0x14)
+    // is in the Execute stage and print the critical control signals.
+    // ===================================================================
+    always @(posedge clk) begin
+        // Check for the PC of the SUB instruction in the ID/EX register
+        if (uut.id_ex_pc === 32'h00000014) begin
+            $display("\n===================== DEBUG PROBE ACTIVATED (SUB instruction at PC=0x14) =====================");
+            $display("Time: %0t", $time);
+            // NOTE: The full instruction word isn't passed to EX, so we check its decoded fields.
+            $display("Signals entering ALU_CONTROL in EX stage:");
+            $display("  -> alu_op (from Main Control): %b", uut.id_ex_alu_op);
+            $display("  -> funct7 (from instruction): %b", uut.id_ex_funct7);
+            $display("  -> funct3 (from instruction): %b", uut.id_ex_funct3);
+            $display("Resulting alu_ctrl (sent to ALU): %b", uut.ex_stage.alu_ctrl);
+            $display("==========================================================================================\n");
+        end
     end
 
 endmodule
+

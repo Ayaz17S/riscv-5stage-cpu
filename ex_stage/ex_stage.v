@@ -1,4 +1,4 @@
-// Enhanced EX Stage with proper forwarding logic
+// Enhanced EX Stage with proper forwarding and store data path
 module ex_stage (
     input [31:0] rs1_data,
     input [31:0] rs2_data,
@@ -12,6 +12,7 @@ module ex_stage (
     input [31:0] ex_mem_alu_result,
     input [31:0] write_data,
     output [31:0] alu_result,
+    output [31:0] store_data, // ✅ NEW: Output for store data
     output zero
 );
 
@@ -20,14 +21,17 @@ module ex_stage (
     // Forwarding MUX for ALU input A (rs1_data)
     wire [31:0] alu_in1;
     assign alu_in1 = (forwardA == 2'b10) ? ex_mem_alu_result :  // EX/MEM forwarding
-                     (forwardA == 2'b01) ? write_data :          // MEM/WB forwarding
-                     rs1_data;                                   // No forwarding
+                     (forwardA == 2'b01) ? write_data :        // MEM/WB forwarding
+                     rs1_data;                                // No forwarding
 
-    // Forwarding MUX for ALU input B (rs2_data or immediate)
+    // Forwarding MUX for ALU input B and for store data
     wire [31:0] rs2_forwarded;
     assign rs2_forwarded = (forwardB == 2'b10) ? ex_mem_alu_result :  // EX/MEM forwarding
-                           (forwardB == 2'b01) ? write_data :          // MEM/WB forwarding
-                           rs2_data;                                   // No forwarding
+                           (forwardB == 2'b01) ? write_data :        // MEM/WB forwarding
+                           rs2_data;                                // No forwarding
+    
+    // ✅ NEW: Assign the forwarded value to the new output
+    assign store_data = rs2_forwarded;
 
     // ALU source MUX (register vs immediate)
     wire [31:0] alu_in2;

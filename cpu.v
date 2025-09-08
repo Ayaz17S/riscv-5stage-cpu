@@ -1,4 +1,4 @@
-// Fixed Top-Level CPU Module with proper stall connections
+// Fixed Top-Level CPU Module with proper stall and store-forwarding connections
 module cpu(
     input clk,
     input reset
@@ -27,6 +27,7 @@ module cpu(
 
     // EX Stage
     wire [31:0] alu_result;
+    wire [31:0] store_data_ex; // ✅ NEW: Wire for forwarded store data
     wire zero;
 
     // EX/MEM
@@ -52,7 +53,7 @@ module cpu(
     // Forwarding
     wire [1:0] forwardA, forwardB;
     
-    // ✅ Hazard Detection
+    // Hazard Detection
     wire stall;
 
     // Control Unit
@@ -128,11 +129,11 @@ module cpu(
         .imm(imm)
     );
 
-    // ✅ ID/EX Pipeline Register (Fixed with stall input)
+    // ID/EX Pipeline Register
     id_ex_reg id_ex_reg(
         .clk(clk),
         .reset(reset),
-        .stall(stall),  // ✅ Connected stall signal
+        .stall(stall),
         .pc_in(pc_id),
         .rs1_data_in(rs1_data),
         .rs2_data_in(rs2_data),
@@ -181,6 +182,7 @@ module cpu(
         .ex_mem_alu_result(ex_mem_alu_result),
         .write_data(write_data),
         .alu_result(alu_result),
+        .store_data(store_data_ex), // ✅ CONNECTED new output
         .zero(zero)
     );
 
@@ -189,7 +191,7 @@ module cpu(
         .clk(clk),
         .reset(reset),
         .alu_result_in(alu_result),
-        .rs2_data_in(id_ex_rs2_data),
+        .rs2_data_in(store_data_ex), // ✅ USING forwarded data for stores
         .rd_in(id_ex_rd),
         .zero_in(zero),
         .reg_write_in(id_ex_reg_write),
